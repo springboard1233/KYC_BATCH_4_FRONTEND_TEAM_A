@@ -1,19 +1,26 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { uploadDocument, getUserDocs } from "./api";
 
-function Dashboard() {
+export default function Dashboard() {
   const navigate = useNavigate();
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [message, setMessage] = useState("");
   const [docs, setDocs] = useState([]);
+  const [showDocsPanel, setShowDocsPanel] = useState(true);
+  const [extractedData, setExtractedData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const dropRef = useRef(null);
 
-  //  On load, check token & fetch docs
+  const MAX_SIZE = 2 * 1024 * 1024; // 2MB
+  const ALLOWED = ["image/jpeg", "image/png", "application/pdf"];
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
-      navigate("/"); // redirect to login
+      navigate("/");
     } else {
       fetchDocuments(token);
     }
@@ -22,47 +29,105 @@ function Dashboard() {
   const fetchDocuments = async (token) => {
     try {
       const data = await getUserDocs(token);
-      setDocs(data.documents || []);
-    } catch (err) {
-      setMessage("Failed to fetch documents or not authorized.");
+      const list = data.documents || [];
+      // Deduplicate by _id when available, else by filename+docType
+      const seen = new Set();
+      const deduped = [];
+      for (const d of list) {
+        const key = d._id ? d._id : `${d.filename || ""}::${d.docType || ""}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          deduped.push(d);
+        }
+      }
+      setDocs(deduped);
+    } catch {
+      // ignore silently - docs optional
     }
   };
 
-  //  Handle file input + preview
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setSelectedFile(file);
-      if (file.type.startsWith("image/")) {
-        const url = URL.createObjectURL(file);
-        setPreviewUrl(url);
-      } else {
+  const resetSelection = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    setExtractedData(null);
+    setError("");
+    setMessage("");
+  };
+
+  const validateAndSetFile = (file) => {
+    if (!file) return;
+    if (!ALLOWED.includes(file.type)) {
+      setError("Invalid file type. Only JPG, PNG or PDF allowed.");
+      return;
+    }
+    if (file.size > MAX_SIZE) {
+      setError("File too large. Max allowed size is 2MB.");
+      return;
+    }
+    setError("");
+    setSelectedFile(file);
+    if (file.type.startsWith("image/")) {
+      try {
+        setPreviewUrl(URL.createObjectURL(file));
+      } catch {
         setPreviewUrl(null);
       }
+    } else {
+      setPreviewUrl(null);
     }
   };
 
-  // Upload Aadhaar/PAN document
+  const handleFileInput = (e) => {
+    const file = e.target.files?.[0];
+    validateAndSetFile(file);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    validateAndSetFile(file);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
   const handleExtractData = async () => {
     const token = localStorage.getItem("token");
     if (!token) {
-      alert("You are not logged in!");
       navigate("/");
       return;
     }
-
     if (!selectedFile) {
-      alert("Please select a file first");
+      setError("Please choose a file to upload.");
       return;
     }
-
+    setLoading(true);
+    setMessage("Uploading and extracting...");
+    setExtractedData(null);
+    setError("");
     try {
-      setMessage(" Uploading and extracting data...");
-      await uploadDocument(token, selectedFile);
-      setMessage("Document uploaded successfully!");
+      const res = await uploadDocument(token, selectedFile);
+      // backend returns { message, data }
+      setMessage(res?.message || "Uploaded");
+      const parsed =
+        res?.data?.parsed ||
+        res?.data?.parsedData ||
+        res?.parsed ||
+        null;
+      if (parsed) {
+        setExtractedData(parsed);
+      } else if (res?.data) {
+        // try common keys
+        const rec = res.data;
+        const maybe = rec.parsed || rec.parsedData || rec;
+        setExtractedData(maybe || null);
+      }
       fetchDocuments(token);
     } catch (err) {
-      setMessage(" Upload failed! Please check your file or token.");
+      setError(err?.message || "Upload failed. Check token or file.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -73,190 +138,238 @@ function Dashboard() {
 
   return (
     <div
-      className="min-h-screen relative overflow-hidden"
+      className="min-h-screen flex items-start justify-center p-6"
       style={{
         background:
-          "linear-gradient(135deg, #0066cc 0%, #00bfb3 50%, #0099cc 100%)",
+          "radial-gradient(circle at 18% 25%, rgba(3,105,161,0.06), transparent 14%), " +
+          "radial-gradient(circle at 82% 75%, rgba(6,182,212,0.04), transparent 14%), " +
+          "linear-gradient(135deg,#eefbff 0%, #f9fdfa 66%)",
       }}
     >
-      {/* Decorative elements */}
-      <div
-        className="absolute top-20 left-10 w-32 h-32 rounded-full opacity-20"
-        style={{
-          background:
-            "radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%)",
-          filter: "blur(2px)",
-        }}
-      ></div>
-      <div
-        className="absolute top-40 left-32 w-24 h-24 rounded-full opacity-20"
-        style={{
-          background:
-            "radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%)",
-          filter: "blur(2px)",
-        }}
-      ></div>
-      <div
-        className="absolute bottom-32 right-20 w-40 h-40 rounded-full opacity-20"
-        style={{
-          background:
-            "radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%)",
-          filter: "blur(2px)",
-        }}
-      ></div>
-
-      {/* Aadhaar Logo Section */}
-      <div className="absolute left-10 top-1/2 transform -translate-y-1/2 hidden lg:block">
-        <div className="relative">
-          {/* Magnifying glass circle */}
-          <div className="w-72 h-72 rounded-full border-8 border-gray-300 bg-white bg-opacity-10 backdrop-blur-sm flex items-center justify-center relative">
-            {/* Dotted pattern overlay */}
-            <div className="absolute inset-0 rounded-full overflow-hidden">
-              <div
-                className="w-full h-full"
-                style={{
-                  backgroundImage:
-                    "radial-gradient(circle, rgba(0,0,0,0.4) 1px, transparent 1px)",
-                  backgroundSize: "8px 8px",
-                }}
-              ></div>
+      <div className="w-full max-w-3xl">
+        <header className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-md bg-white shadow flex items-center justify-center">
+              <svg
+                className="w-6 h-6 text-blue-600"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+              >
+                <path
+                  d="M12 2C8 2 4 6 4 10c0 7 8 12 8 12s8-5 8-12c0-4-4-8-8-8z"
+                  strokeWidth="1.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </div>
-
-            {/* Aadhaar fingerprint icon */}
-            <div className="relative z-10 text-center">
-              <div className="text-6xl mb-2">
-                <svg
-                  viewBox="0 0 24 24"
-                  className="w-32 h-32 mx-auto"
-                  fill="currentColor"
-                >
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-                </svg>
-              </div>
-              <div className="text-2xl font-bold text-gray-800 tracking-wider">
-                AADHAAR
-              </div>
+            <div>
+              <h1 className="text-xl font-semibold text-gray-800">
+                Verification Portal
+              </h1>
+              <p className="text-sm text-gray-500">
+                Upload Aadhaar / PAN to extract identity details
+              </p>
             </div>
           </div>
-          {/* Magnifying glass handle */}
-          <div
-            className="absolute bottom-0 right-0 w-16 h-32 bg-gray-700 rounded-full transform rotate-45 origin-top-left"
-            style={{
-              left: "70%",
-              top: "70%",
-            }}
-          ></div>
-          <div
-            className="absolute bottom-0 right-0 w-12 h-24 bg-gray-900 rounded-full transform rotate-45 origin-top-left"
-            style={{
-              left: "72%",
-              top: "72%",
-            }}
-          ></div>
-        </div>
-
-        {/* Decorative arrows */}
-        <div className="absolute -left-20 top-20 space-y-4">
-          <div className="text-red-500 text-3xl">▶</div>
-          <div className="text-red-500 text-3xl">▶</div>
-          <div className="text-red-500 text-3xl">▶</div>
-          <div className="text-red-500 text-3xl">▶</div>
-        </div>
-        <div className="absolute -left-10 top-40 space-y-4">
-          <div className="text-green-400 text-3xl">▶</div>
-          <div className="text-green-400 text-3xl">▶</div>
-          <div className="text-yellow-400 text-3xl">▶</div>
-        </div>
-      </div>
-
-      {/* Main Upload Card */}
-      <div className="flex items-center justify-center min-h-screen p-4">
-        <div className="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md relative z-10">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold text-gray-800 text-center">
-              Aadhaar KYC Upload
-            </h1>
+          <div className="flex items-center gap-3">
             <button
               onClick={handleLogout}
-              className="text-sm bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition"
+              className="bg-red-600 text-white text-sm px-3 py-1 rounded hover:bg-red-700"
             >
               Logout
             </button>
           </div>
+        </header>
 
-          <div className="space-y-6">
-            {/* File Input */}
-            <div>
-              <input
-                type="file"
-                id="fileInput"
-                onChange={handleFileChange}
-                accept="image/*,.pdf"
-                className="hidden"
-              />
-              <label
-                htmlFor="fileInput"
-                className="inline-block px-4 py-2 bg-gray-200 text-gray-700 rounded cursor-pointer hover:bg-gray-300 transition-colors"
-              >
-                Choose file
-              </label>
-              <span className="ml-3 text-gray-600 text-sm">
-                {selectedFile ? selectedFile.name : "No file chosen"}
-              </span>
-            </div>
-
-            {/* Preview Area */}
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 min-h-[200px] flex items-center justify-center bg-gray-50">
-              {previewUrl ? (
-                <img
-                  src={previewUrl}
-                  alt="Preview"
-                  className="max-w-full max-h-64 object-contain"
-                />
-              ) : (
-                <p className="text-gray-500 text-center">
-                  File preview will appear here.
-                </p>
-              )}
-            </div>
-
-            {/* Upload Button */}
-            <button
-              onClick={handleExtractData}
-              className="w-full py-3 px-6 bg-blue-600 text-white font-medium rounded hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            >
-              Extract Data
-            </button>
-
-            {/* Upload Status */}
-            {message && (
-              <p className="text-center text-gray-700 text-sm">{message}</p>
-            )}
+        <main className="bg-white border rounded-lg shadow p-6">
+          {/* Drag & Drop */}
+          <div
+            ref={dropRef}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            className="border border-dashed rounded-md p-6 mb-4 text-center cursor-pointer hover:border-gray-400"
+            style={{ background: "#fafafa" }}
+          >
+            <input
+              id="fileInput"
+              type="file"
+              accept="image/jpeg,image/png,application/pdf"
+              onChange={handleFileInput}
+              className="hidden"
+            />
+            <label htmlFor="fileInput" className="block">
+              <div className="mx-auto mb-2 w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
+                📁
+              </div>
+              <div className="text-sm text-gray-700">
+                Drag & drop a file here, or{" "}
+                <span className="text-blue-600 underline cursor-pointer">
+                  browse
+                </span>
+              </div>
+              <div className="text-xs text-gray-400 mt-1">
+                JPEG, PNG, PDF — max 2MB
+              </div>
+            </label>
           </div>
-        </div>
-      </div>
 
-      {/* Uploaded Docs Section */}
-      {docs.length > 0 && (
-        <div className="absolute bottom-0 left-0 right-0 bg-white bg-opacity-90 backdrop-blur-sm p-4 shadow-inner">
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">
-            Uploaded Documents
-          </h3>
-          <ul className="max-h-40 overflow-y-auto">
-            {docs.map((doc) => (
-              <li
-                key={doc._id}
-                className="flex justify-between text-sm text-gray-700 border-b py-1"
-              >
-                <span>{doc.filename}</span>
-                <span className="text-gray-500">{doc.docType}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+          {error && (
+            <div className="text-sm text-red-600 mb-3">{error}</div>
+          )}
+          {message && !error && (
+            <div className="text-sm text-green-600 mb-3">{message}</div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <div className="mb-3 text-sm text-gray-600">Preview</div>
+              <div className="h-56 border rounded flex items-center justify-center bg-gray-50">
+                {previewUrl ? (
+                  <img
+                    src={previewUrl}
+                    alt="preview"
+                    className="max-h-full max-w-full object-contain"
+                  />
+                ) : selectedFile ? (
+                  <div className="text-sm text-gray-600">{selectedFile.name}</div>
+                ) : (
+                  <div className="text-sm text-gray-400">No preview available</div>
+                )}
+              </div>
+
+              <div className="mt-4 flex gap-2">
+                <button
+                  onClick={handleExtractData}
+                  disabled={loading}
+                  className={`flex-1 py-2 rounded text-white ${
+                    loading
+                      ? "bg-blue-400"
+                      : "bg-blue-600 hover:bg-blue-700"
+                  }`}
+                >
+                  {loading ? "Processing..." : "Upload & Extract"}
+                </button>
+                <button
+                  onClick={resetSelection}
+                  className="py-2 px-3 rounded border hover:bg-gray-50"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-3 text-sm text-gray-600">Extracted Details</div>
+              <div className="border rounded p-4 min-h-[224px] bg-white">
+                {!extractedData ? (
+                  <div className="text-sm text-gray-400">
+                    No data extracted yet.
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-800 space-y-2">
+                    <div>
+                      <strong>Name:</strong> {extractedData.name || "-"}
+                    </div>
+                    <div>
+                      <strong>Father's Name:</strong>{" "}
+                      {extractedData.fatherName ||
+                        extractedData.father_name ||
+                        extractedData.father ||
+                        "-"}
+                    </div>
+                    <div>
+                      <strong>DOB:</strong> {extractedData.dob || "-"}
+                    </div>
+                    <div>
+                      <strong>Gender:</strong> {extractedData.gender || "-"}
+                    </div>
+                    <div>
+                      <strong>
+                        Aadhaar / PAN:
+                      </strong>{" "}
+                      {extractedData.aadhaarNumber ||
+                        extractedData.panNumber ||
+                        extractedData.aadhaar ||
+                        extractedData.pan ||
+                        "-"}
+                    </div>
+                    <div>
+                      <strong>Address:</strong> {extractedData.address || "-"}
+                    </div>
+
+                    <details className="mt-2 text-xs text-gray-500">
+                      <summary className="cursor-pointer">
+                        Raw parsed JSON
+                      </summary>
+                      <pre className="mt-2 text-xs bg-gray-50 p-2 rounded overflow-auto">
+                        {JSON.stringify(extractedData, null, 2)}
+                      </pre>
+                    </details>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </main>
+
+        {/* Uploaded docs list (deduped). show/hide + clear controls */}
+        {docs.length > 0 && showDocsPanel && (
+          <section className="mt-4 bg-white border rounded p-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm text-gray-700">Uploaded documents</h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => fetchDocuments(localStorage.getItem("token"))}
+                  className="text-xs px-2 py-1 border rounded hover:bg-gray-50"
+                >
+                  Refresh
+                </button>
+                <button
+                  onClick={() => setShowDocsPanel(false)}
+                  className="text-xs px-2 py-1 border rounded hover:bg-gray-50"
+                >
+                  Hide
+                </button>
+                <button
+                  onClick={() => setDocs([])}
+                  className="text-xs px-2 py-1 border rounded hover:bg-gray-50"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+
+            <ul className="text-sm text-gray-600 space-y-1 max-h-40 overflow-auto">
+              {docs.map((d) => (
+                <li key={d._id || `${d.filename}::${d.docType}`} className="flex justify-between">
+                  <span>{d.filename}</span>
+                  <span className="text-xs text-gray-400">{d.docType}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        {/* Show toggle when hidden */}
+        {docs.length > 0 && !showDocsPanel && (
+          <div className="mt-4">
+            <button
+              onClick={() => setShowDocsPanel(true)}
+              className="text-sm text-blue-600 underline"
+            >
+              Show uploaded documents
+            </button>
+            <button
+              onClick={() => setDocs([])}
+              className="ml-3 text-sm text-gray-600 underline"
+            >
+              Clear list
+            </button>
+          </div>
+        )
+        }
+      </div>
     </div>
   );
 }
-
-export default Dashboard;

@@ -1,10 +1,9 @@
 import React, { useState } from "react";
-import { FaUser, FaLock, FaEnvelope } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
-import { signup } from "./api"; // backend function
+import { signup } from "./api";
 
-function SignUp() {
-  const [username, setUsername] = useState("");
+export default function SignUp() {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -17,113 +16,70 @@ function SignUp() {
     setError("");
     setSuccess("");
     setLoading(true);
-
     try {
-      // Call backend signup API
-      const res = await signup(username, email, password);
-      if (res?.message === "Signup successful") {
-        setSuccess(" Account created successfully! Redirecting to login...");
-        setTimeout(() => navigate("/"), 1500);
-      } else {
-        throw new Error(res?.detail || "Signup failed");
-      }
+      const res = await signup(name.trim(), email.trim(), password);
+      setSuccess(res?.message || "Account created. Redirecting...");
+      setTimeout(() => navigate("/"), 1200);
     } catch (err) {
-      console.error("Signup error:", err);
-      setError(
-        err?.message ||
-          " Signup failed. Please check your details and try again."
-      );
+      setError(err?.message || "Signup failed. Check details.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-100">
-      <div className="w-full max-w-md">
-        <div className="bg-white p-8 rounded-lg shadow-lg">
-          <h1 className="text-3xl font-bold text-center text-gray-800 mb-8">
-            Create Account
-          </h1>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <div className="w-full max-w-md bg-white border rounded-lg p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold text-gray-800 mb-4 text-center">
+          Create account
+        </h1>
 
-          {error && (
-            <p className="text-red-600 text-center mb-3 font-medium">{error}</p>
-          )}
-          {success && (
-            <p className="text-green-600 text-center mb-3 font-medium">
-              {success}
-            </p>
-          )}
+        {error && <div className="mb-3 text-sm text-red-600">{error}</div>}
+        {success && <div className="mb-3 text-sm text-green-600">{success}</div>}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <FaUser className="text-gray-400" />
-              </div>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Full name"
-                required
-              />
-            </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Full name"
+            className="w-full px-3 py-2 border rounded focus:outline-none"
+            required
+          />
+          <input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email"
+            type="email"
+            className="w-full px-3 py-2 border rounded focus:outline-none"
+            required
+          />
+          <input
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Password (8–16 chars)"
+            type="password"
+            className="w-full px-3 py-2 border rounded focus:outline-none"
+            required
+          />
 
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <FaEnvelope className="text-gray-400" />
-              </div>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Email address"
-                required
-              />
-            </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className={`w-full py-2 rounded text-white ${
+              loading ? "bg-blue-400" : "bg-blue-600 hover:bg-blue-700"
+            }`}
+          >
+            {loading ? "Creating..." : "Create account"}
+          </button>
+        </form>
 
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <FaLock className="text-gray-400" />
-              </div>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Password (8–16 chars)"
-                required
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
-                loading
-                  ? "bg-blue-400 cursor-not-allowed"
-                  : "bg-blue-600 hover:bg-blue-700"
-              } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
-            >
-              {loading ? "Creating Account..." : "Sign up"}
-            </button>
-          </form>
-
-          <p className="mt-6 text-center text-sm text-gray-600">
-            Already have an account?{" "}
-            <Link
-              to="/"
-              className="font-medium text-blue-600 hover:text-blue-500"
-            >
-              Sign in
-            </Link>
-          </p>
-        </div>
+        <p className="mt-4 text-center text-sm text-gray-600">
+          Already have an account?{" "}
+          <Link to="/" className="text-blue-600 underline">
+            Sign in
+          </Link>
+        </p>
       </div>
     </div>
   );
 }
-
-export default SignUp;
