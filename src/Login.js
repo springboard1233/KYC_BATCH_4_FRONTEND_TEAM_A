@@ -1,87 +1,107 @@
-// src/Login.js
 import React, { useState } from "react";
 import { login } from "./api";
 import { useNavigate, Link } from "react-router-dom";
-import { FaUser, FaLock } from "react-icons/fa";
 
-function Login() {
+export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-
+    setLoading(true);
     try {
-      const data = await login(email, password);
+      const data = await login(email.trim(), password);
       localStorage.setItem("token", data.access_token);
-      alert("Login successful!");
       navigate("/dashboard");
     } catch (err) {
-      setError("Invalid email or password");
+      setError(err?.message || "Invalid email or password");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex justify-center items-center h-screen bg-gradient-to-br from-blue-100 to-blue-300">
+    <div
+      className="min-h-screen flex items-center justify-center p-6"
+      style={{
+        background:
+          "radial-gradient(circle at 10% 20%, rgba(3,105,161,0.06), transparent 12%), " +
+          "radial-gradient(circle at 90% 80%, rgba(8,145,178,0.05), transparent 12%), " +
+          "linear-gradient(135deg, #e9f8ff 0%, #f7fbfb 65%)",
+      }}
+    >
       <form
         onSubmit={handleSubmit}
-        className="bg-white shadow-xl rounded-lg p-8 w-96"
+        className="w-full max-w-sm bg-white border rounded-lg shadow-md p-8"
       >
-        <h2 className="text-3xl font-bold text-center text-blue-700 mb-6">
-          Login
+        {/* subtle brand accent */}
+        <div className="flex items-center justify-center mb-4">
+          <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center">
+            <svg
+              className="w-6 h-6 text-blue-600"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+            >
+              <path
+                d="M12 2C8 2 4 6 4 10c0 7 8 12 8 12s8-5 8-12c0-4-4-8-8-8z"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+        </div>
+
+        <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">
+          Sign in
         </h2>
 
-        {error && <p className="text-red-500 text-center mb-3">{error}</p>}
-
-        <div className="mb-4">
-          <label className="block mb-2 text-gray-600">Email</label>
-          <div className="flex items-center border rounded-md p-2">
-            <FaUser className="text-gray-400 mr-2" />
-            <input
-              type="email"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="outline-none flex-1"
-              required
-            />
+        {error && (
+          <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 p-2 rounded">
+            {error}
           </div>
-        </div>
+        )}
 
-        <div className="mb-4">
-          <label className="block mb-2 text-gray-600">Password</label>
-          <div className="flex items-center border rounded-md p-2">
-            <FaLock className="text-gray-400 mr-2" />
-            <input
-              type="password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="outline-none flex-1"
-              required
-            />
-          </div>
-        </div>
+        <label className="block text-sm text-gray-600 mb-1">Email</label>
+        <input
+          className="w-full mb-4 px-3 py-2 border rounded focus:outline-none focus:ring-1 focus:ring-blue-400"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+
+        <label className="block text-sm text-gray-600 mb-1">Password</label>
+        <input
+          className="w-full mb-6 px-3 py-2 border rounded focus:outline-none focus:ring-1 focus:ring-blue-400"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
 
         <button
           type="submit"
-          className="bg-blue-600 text-white w-full py-2 rounded-md hover:bg-blue-700 transition duration-200"
+          disabled={loading}
+          className={`w-full py-2 rounded text-white ${
+            loading ? "bg-blue-400" : "bg-blue-600 hover:bg-blue-700"
+          }`}
         >
-          Login
+          {loading ? "Signing in..." : "Sign in"}
         </button>
 
-        <p className="text-center mt-4 text-sm">
+        <p className="mt-4 text-center text-sm text-gray-600">
           Don’t have an account?{" "}
-          <Link to="/signup" className="text-blue-700 font-semibold">
-            Sign Up
+          <Link to="/signup" className="text-blue-600 underline">
+            Sign up
           </Link>
         </p>
       </form>
     </div>
   );
 }
-
-export default Login;
