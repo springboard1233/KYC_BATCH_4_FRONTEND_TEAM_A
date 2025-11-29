@@ -1,139 +1,70 @@
-🧾 KYC Verification System (FastAPI + React)
+# Getting Started with Create React App
 
-This project is a Full Stack KYC (Know Your Customer) Verification System that allows users to sign up, log in securely, and upload Aadhaar/PAN documents. The backend performs OCR (Optical Character Recognition) using Tesseract to extract data from the uploaded documents, and the frontend provides a clean, modern dashboard for interaction.
+This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
-🚀 Tech Stack
+## Available Scripts
 
-Frontend:
+In the project directory, you can run:
 
-React (Create React App)
+### `npm start`
 
-Tailwind CSS
+Runs the app in the development mode.\
+Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
 
-React Router DOM
+The page will reload when you make changes.\
+You may also see any lint errors in the console.
 
-React Icons
+### `npm test`
 
-Backend:
+Launches the test runner in the interactive watch mode.\
+See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
 
-FastAPI
+### `npm run build`
 
-MongoDB (with PyMongo)
+Builds the app for production to the `build` folder.\
+It correctly bundles React in production mode and optimizes the build for the best performance.
 
-JWT Authentication
+The build is minified and the filenames include the hashes.\
+Your app is ready to be deployed!
 
-Python Tesseract (OCR)
+See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
 
-⚙️ Project Setup
-1️⃣ Clone the Repository
-git clone https://github.com/your-username/KYC_VERIFICATION_SYSTEM.git
-cd KYC_VERIFICATION_SYSTEM
+### `npm run eject`
 
-2️⃣ Backend Setup
-📁 Navigate to backend folder
-cd backend
+**Note: this is a one-way operation. Once you `eject`, you can't go back!**
 
-🧩 Create and activate virtual environment
-python -m venv venv
-venv\Scripts\activate   # on Windows
-# or
-source venv/bin/activate   # on Mac/Linux
+If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
 
-📦 Install dependencies
-pip install -r requirements.txt
+Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
 
-🔐 Create .env file
+You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
 
-Create a .env file in your backend folder:
+## Learn More
 
-MONGO_URI=your_mongodb_connection_string
-SECRET_KEY=your_secret_key
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=1440
+You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
 
-▶️ Run backend
-uvicorn app.main:app --reload
+To learn React, check out the [React documentation](https://reactjs.org/).
 
+### Code Splitting
 
-Backend will run on:
-👉 http://127.0.0.1:8000
+This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
 
-Swagger docs available at:
-👉 http://127.0.0.1:8000/docs
+### Analyzing the Bundle Size
 
-3️⃣ Frontend Setup
-📁 Navigate to frontend folder
-cd frontend
+This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
 
-📦 Install dependencies
-npm install
+### Making a Progressive Web App
 
-▶️ Run the app
-npm start
+This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
 
+### Advanced Configuration
 
-Frontend will run on:
-👉 http://localhost:3000
+This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
 
-💡 Features
+### Deployment
 
-✅ User Signup & Login (JWT Authentication)
-✅ Secure MongoDB data storage
-✅ Document upload (Aadhaar / PAN)
-✅ OCR-based data extraction using Tesseract
-✅ User-specific dashboard displaying uploaded documents
-✅ Clean, responsive UI built with Tailwind CSS
+This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
 
-📁 Folder Structure
-KYC_VERIFICATION_SYSTEM/
-│
-├── backend/
-│   ├── app/
-│   │   ├── main.py
-│   │   ├── db.py
-│   │   ├── utils.py
-│   │   ├── ocr.py
-│   ├── .env
-│   ├── requirements.txt
-│
-└── frontend/
-    ├── src/
-    │   ├── api.js
-    │   ├── Login.js
-    │   ├── SignUp.js
-    │   ├── Dashboard.js
-    │   ├── App.js
-    │   └── index.js
-    ├── package.json
+### `npm run build` fails to minify
 
-🧠 How It Works
-
-Signup / Login: User details stored securely with hashed passwords (bcrypt).
-
-JWT Tokens: Generated upon login and used for authentication.
-
-Upload Document: Image is sent to backend via FastAPI.
-
-OCR Processing: Text extracted using Tesseract and parsed for Aadhaar/PAN info.
-
-MongoDB Storage: Data saved under each authenticated user.
-
-Dashboard: Displays uploaded documents and extracted metadata.
-
-🛡️ Environment Variables
-Variable	Description
-MONGO_URI	MongoDB connection string
-SECRET_KEY	Secret key for JWT
-ALGORITHM	JWT encoding algorithm (default: HS256)
-ACCESS_TOKEN_EXPIRE_MINUTES	JWT token expiry time
-🧩 API Endpoints
-Method	Endpoint	Description
-POST	/signup	Register a new user
-POST	/login	Authenticate and get JWT token
-POST	/upload/	Upload Aadhaar or PAN image
-GET	/api/get-user-docs	Fetch uploaded user documents
-GET	/	API health check
-	
-🧾 License
-
-This project is licensed under the MIT License.
+This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
